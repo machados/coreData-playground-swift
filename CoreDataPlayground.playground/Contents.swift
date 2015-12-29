@@ -1,15 +1,18 @@
-//: ## CoreData with Swift playground
-//: Examples of core data usage.
+//: ## Programmatic model creation
 
 import UIKit
 import CoreData
 import Foundation
+import XCPlayground
 
 //: Access the playground helper sources
 import CoreDataPlayground_Sources
 
 //: Entity Classes
+//:
+//: Entity classes need to be annotated with @objc and subclasses of NSManagedObject
 
+@objc(Employee)
 final class Employee: NSManagedObject, ModelEntity {
     @NSManaged var name: String
     @NSManaged var company: Company?
@@ -31,6 +34,7 @@ final class Employee: NSManagedObject, ModelEntity {
     
 }
 
+@objc(Company)
 final class Company: NSManagedObject, ModelEntity {
     @NSManaged var name: String
     @NSManaged var employees: Set<Employee>
@@ -75,14 +79,20 @@ NSNotificationCenter.defaultCenter().addObserver(notificationDelegate, selector:
 
 //: Add managed objects
 
-var company = NSEntityDescription.insertNewObjectForEntityForName(Company.entityName, inManagedObjectContext: moc)
+var company = NSEntityDescription.insertNewObjectForEntityForName(Company.entityName, inManagedObjectContext: moc) as! Company
 
-company.setValue("ACME", forKey: Company.Attributes.name.rawValue)
+//: Set a value using KVO:
+//:
+//: `company.setValue("ACME", forKey: Company.Attributes.name.rawValue)`
+//:
+//: Or using the NSManagedObject subclass, since we defined one:
 
-var employee = NSEntityDescription.insertNewObjectForEntityForName(Employee.entityName, inManagedObjectContext: moc)
+company.name = "ACME"
 
-employee.setValue("John", forKey: Employee.Attributes.name.rawValue)
-employee.setValue(company, forKey: "company")
+var employee = NSEntityDescription.insertNewObjectForEntityForName(Employee.entityName, inManagedObjectContext: moc) as! Employee
+
+employee.name = "John"
+employee.company = company
 
 //: Persist the data
 
@@ -92,6 +102,9 @@ try! moc.save()
 
 let fetchRequest = NSFetchRequest(entityName: Employee.entityName)
 let results = try! moc.executeFetchRequest(fetchRequest)
+
 results.count
-results[0].valueForKey(Employee.Attributes.name.rawValue)
-results[0].valueForKey("company")?.valueForKey(Company.Attributes.name.rawValue)
+
+let emp = results[0] as! Employee
+emp.name
+emp.company?.name
