@@ -13,7 +13,7 @@ import CoreDataPlayground_Sources
 //: Entity classes need to be annotated with @objc and subclasses of NSManagedObject
 
 @objc(Employee)
-final class Employee: NSManagedObject, ModelEntity {
+class Employee: NSManagedObject, ModelEntity {
     @NSManaged var name: String
     @NSManaged var company: Company?
     
@@ -32,10 +32,30 @@ final class Employee: NSManagedObject, ModelEntity {
                 .string(Attributes.name.rawValue, optional: false, indexed: true)
     }
     
+    // Better description for Employee
+    override var description: String {
+        return "Employee: \(self.name)"
+    }
+    
+}
+
+//: CRUD
+extension Employee {
+    static func createWithName(
+        name: String,
+        andCompany company: Company,
+        inContext context: NSManagedObjectContext) -> Employee {
+            
+        let employee = NSEntityDescription.insertNewObjectForEntityForName(Employee.entityName, inManagedObjectContext: context) as! Employee
+        
+        employee.name = name
+        employee.company = company
+        return employee
+    }
 }
 
 @objc(Company)
-final class Company: NSManagedObject, ModelEntity {
+class Company: NSManagedObject, ModelEntity {
     @NSManaged var name: String
     @NSManaged var employees: Set<Employee>
     
@@ -54,6 +74,19 @@ final class Company: NSManagedObject, ModelEntity {
                 .string(Attributes.name.rawValue, optional: false, indexed: true)
     }
     
+    // Better description for Company
+    override var description: String {
+        return "Company: \(self.name)"
+    }
+}
+
+//: CRUD
+extension Company {
+    static func createWithName(name: String, inContext context: NSManagedObjectContext) -> Company {
+        let company = NSEntityDescription.insertNewObjectForEntityForName(Company.entityName, inManagedObjectContext: moc) as! Company
+        company.name = name
+        return company
+    }
 }
 
 //: Create the model
@@ -79,20 +112,10 @@ NSNotificationCenter.defaultCenter().addObserver(notificationDelegate, selector:
 
 //: Add managed objects
 
-var company = NSEntityDescription.insertNewObjectForEntityForName(Company.entityName, inManagedObjectContext: moc) as! Company
+let company = Company.createWithName("ACME", inContext: moc)
 
-//: Set a value using KVO:
-//:
-//: `company.setValue("ACME", forKey: Company.Attributes.name.rawValue)`
-//:
-//: Or using the NSManagedObject subclass, since we defined one:
-
-company.name = "ACME"
-
-var employee = NSEntityDescription.insertNewObjectForEntityForName(Employee.entityName, inManagedObjectContext: moc) as! Employee
-
-employee.name = "John"
-employee.company = company
+Employee.createWithName("John", andCompany: company, inContext: moc)
+Employee.createWithName("Paul", andCompany: company, inContext: moc)
 
 //: Persist the data
 
@@ -100,11 +123,17 @@ try! moc.save()
 
 //: Fetch the data
 
-let fetchRequest = NSFetchRequest(entityName: Employee.entityName)
-let results = try! moc.executeFetchRequest(fetchRequest)
+var fetchRequest = NSFetchRequest(entityName: Employee.entityName)
+var results = try! moc.executeFetchRequest(fetchRequest)
 
 results.count
 
 let emp = results[0] as! Employee
 emp.name
 emp.company?.name
+
+//: To get a company employees, simply access the managed object property
+
+print(company.employees)
+
+//: [Next](@next)
